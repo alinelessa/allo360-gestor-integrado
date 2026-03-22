@@ -20,10 +20,11 @@ interface Cliente {
   endereco: string | null;
   limite_credito: number;
   status: string;
+  loja_id?: string | null;
 }
 
 const Clientes = () => {
-  const { profile } = useAuth();
+  const { profile, lojaAtiva } = useAuth();
   const { toast } = useToast();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [search, setSearch] = useState("");
@@ -40,14 +41,16 @@ const Clientes = () => {
   });
 
   const empresaId = profile?.empresa_id;
+  const lojaId = lojaAtiva?.id;
 
   const fetchData = async () => {
-    if (!empresaId) return;
+    if (!empresaId || !lojaId) return;
 
     const { data } = await supabase
       .from("clientes")
       .select("*")
       .eq("empresa_id", empresaId)
+      .eq("loja_id", lojaId)
       .is("deleted_at", null)
       .order("nome");
 
@@ -56,12 +59,13 @@ const Clientes = () => {
 
   useEffect(() => {
     fetchData();
-  }, [empresaId]);
+  }, [empresaId, lojaId]);
 
   const handleSave = async () => {
     console.log("handleSave disparou");
     console.log("profile:", profile);
     console.log("empresaId:", empresaId);
+    console.log("lojaId:", lojaId);
     console.log("form:", form);
 
     if (!empresaId) {
@@ -73,8 +77,18 @@ const Clientes = () => {
       return;
     }
 
+    if (!lojaId) {
+      toast({
+        title: "Loja não selecionada",
+        description: "Selecione uma loja antes de cadastrar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const data = {
       empresa_id: empresaId,
+      loja_id: lojaId,
       nome: form.nome,
       cpf_cnpj: form.cpf_cnpj || null,
       telefone: form.telefone || null,
