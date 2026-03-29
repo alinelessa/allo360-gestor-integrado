@@ -58,7 +58,9 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     const { error } = await signIn(email, password);
+
     setLoading(false);
 
     if (error) {
@@ -73,19 +75,21 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen relative z-10 isolate flex items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-md shadow-2xl border border-black/5 bg-white/90 backdrop-blur">
-        <CardHeader className="items-center pb-2 pt-10">
+    <div className="relative isolate z-10 flex min-h-screen items-center justify-center px-4 py-10">
+      <Card className="w-full max-w-md app-glass p-2">
+        <CardHeader className="items-center pt-10 pb-4">
           <Logo size="lg" />
-          <p className="text-muted-foreground text-sm mt-2">
+          <p className="app-soft mt-2 text-sm">
             Sistema de Gestão Empresarial
           </p>
         </CardHeader>
 
-        <CardContent className="pt-6 pb-10 px-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <CardContent className="px-8 pb-10 pt-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -98,7 +102,9 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-sm font-medium">
+                Senha
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -118,9 +124,8 @@ const Login = () => {
               {loading ? "Entrando..." : "Entrar"}
             </Button>
 
-            {/* 🔥 NOVA MENSAGEM */}
-            <p className="text-center text-xs text-muted-foreground mt-6">
-              © {new Date().getFullYear()} Todos os direitos reservados à Lessatech
+            <p className="app-faint mt-6 text-center text-xs">
+              © {new Date().getFullYear()} Lessatech
             </p>
           </form>
         </CardContent>

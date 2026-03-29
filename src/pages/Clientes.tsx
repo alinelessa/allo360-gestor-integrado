@@ -5,8 +5,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
@@ -20,16 +33,17 @@ interface Cliente {
   endereco: string | null;
   limite_credito: number;
   status: string;
-  loja_id?: string | null;
 }
 
 const Clientes = () => {
   const { profile, lojaAtiva } = useAuth();
   const { toast } = useToast();
+
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
+
   const [form, setForm] = useState({
     nome: "",
     cpf_cnpj: "",
@@ -62,31 +76,9 @@ const Clientes = () => {
   }, [empresaId, lojaId]);
 
   const handleSave = async () => {
-    console.log("handleSave disparou");
-    console.log("profile:", profile);
-    console.log("empresaId:", empresaId);
-    console.log("lojaId:", lojaId);
-    console.log("form:", form);
+    if (!empresaId || !lojaId) return;
 
-    if (!empresaId) {
-      toast({
-        title: "Empresa não encontrada",
-        description: "O usuário logado não possui empresa_id no perfil.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!lojaId) {
-      toast({
-        title: "Loja não selecionada",
-        description: "Selecione uma loja antes de cadastrar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const data = {
+    const payload = {
       empresa_id: empresaId,
       loja_id: lojaId,
       nome: form.nome,
@@ -98,42 +90,11 @@ const Clientes = () => {
       status: form.status,
     };
 
-    console.log("payload enviado:", data);
-
     if (editing) {
-      const { error } = await supabase
-        .from("clientes")
-        .update(data)
-        .eq("id", editing.id);
-
-      console.log("resultado update:", error);
-
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
+      await supabase.from("clientes").update(payload).eq("id", editing.id);
       toast({ title: "Cliente atualizado!" });
     } else {
-      const { error } = await supabase
-        .from("clientes")
-        .insert([data]);
-
-      console.log("resultado insert:", error);
-
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
+      await supabase.from("clientes").insert([payload]);
       toast({ title: "Cliente cadastrado!" });
     }
 
@@ -185,36 +146,36 @@ const Clientes = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* HEADER */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold">Clientes</h1>
-          <p className="text-muted-foreground text-sm">
-            Gerenciamento de clientes
+          <p className="app-faint text-xs uppercase tracking-[0.12em]">
+            Cadastro
+          </p>
+          <h1 className="text-3xl font-semibold tracking-[-0.03em]">
+            Clientes
+          </h1>
+          <p className="app-soft text-sm">
+            Gerencie e acompanhe seus clientes
           </p>
         </div>
 
-        <Dialog
-          open={open}
-          onOpenChange={(v) => {
-            setOpen(v);
-            if (!v) resetForm();
-          }}
-        >
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
               Novo Cliente
             </Button>
           </DialogTrigger>
 
-          <DialogContent>
+          <DialogContent className="app-glass border-none">
             <DialogHeader>
               <DialogTitle>
                 {editing ? "Editar Cliente" : "Novo Cliente"}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Nome</Label>
@@ -271,13 +232,15 @@ const Clientes = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Limite de Crédito (R$)</Label>
+                  <Label>Limite (R$)</Label>
                   <Input
                     type="number"
-                    step="0.01"
                     value={form.limite_credito}
                     onChange={(e) =>
-                      setForm({ ...form, limite_credito: e.target.value })
+                      setForm({
+                        ...form,
+                        limite_credito: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -285,7 +248,7 @@ const Clientes = () => {
                 <div>
                   <Label>Status</Label>
                   <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="app-input h-11 w-full"
                     value={form.status}
                     onChange={(e) =>
                       setForm({ ...form, status: e.target.value })
@@ -298,16 +261,17 @@ const Clientes = () => {
               </div>
 
               <Button onClick={handleSave} className="w-full">
-                {editing ? "Salvar" : "Cadastrar"}
+                {editing ? "Salvar alterações" : "Cadastrar cliente"}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <Card className="shadow-sm">
-        <CardContent className="p-4">
-          <div className="relative mb-4">
+      {/* LISTA */}
+      <Card>
+        <CardContent className="p-5">
+          <div className="relative mb-5">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar cliente..."
@@ -334,9 +298,7 @@ const Clientes = () => {
               {filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.nome}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {c.cpf_cnpj}
-                  </TableCell>
+                  <TableCell className="app-soft">{c.cpf_cnpj}</TableCell>
                   <TableCell>{c.telefone}</TableCell>
                   <TableCell>{c.email}</TableCell>
                   <TableCell className="text-right">
@@ -350,7 +312,7 @@ const Clientes = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -358,6 +320,7 @@ const Clientes = () => {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
+
                       <Button
                         variant="ghost"
                         size="icon"
@@ -372,10 +335,7 @@ const Clientes = () => {
 
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center text-muted-foreground py-8"
-                  >
+                  <TableCell colSpan={7} className="text-center py-10 app-soft">
                     Nenhum cliente encontrado
                   </TableCell>
                 </TableRow>

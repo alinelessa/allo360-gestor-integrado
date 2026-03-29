@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,6 +28,16 @@ interface Loja {
   ativo: boolean;
 }
 
+interface AssistantContextData {
+  empresaId: string | null;
+  lojaId: string | null;
+  lojaNome: string | null;
+  userId: string | null;
+  userName: string | null;
+  userEmail: string | null;
+  roles: AppRole[];
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -35,6 +45,8 @@ interface AuthContextType {
   empresaUsuario: EmpresaUsuario | null;
   lojas: Loja[];
   lojaAtiva: Loja | null;
+  empresaIdAtiva: string | null;
+  assistantContext: AssistantContextData;
   setLojaAtiva: (loja: Loja | null) => void;
   roles: AppRole[];
   loading: boolean;
@@ -256,6 +268,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasRole = (role: AppRole) => roles.includes(role);
 
+  const empresaIdAtiva = empresaUsuario?.empresa_id || profile?.empresa_id || null;
+
+  const assistantContext = useMemo<AssistantContextData>(
+    () => ({
+      empresaId: empresaIdAtiva,
+      lojaId: lojaAtiva?.id ?? null,
+      lojaNome: lojaAtiva?.nome ?? null,
+      userId: user?.id ?? null,
+      userName: profile?.nome ?? user?.email ?? null,
+      userEmail: profile?.email ?? user?.email ?? null,
+      roles,
+    }),
+    [empresaIdAtiva, lojaAtiva, user, profile, roles]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -265,6 +292,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         empresaUsuario,
         lojas,
         lojaAtiva,
+        empresaIdAtiva,
+        assistantContext,
         setLojaAtiva,
         roles,
         loading,

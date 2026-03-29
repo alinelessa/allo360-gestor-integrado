@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,73 +6,347 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 15% 20%;
+    --radius: 0.875rem;
+
+    /* ===============================
+       LIGHT MODE — Curated Gallery
+    =============================== */
+    --background: 40 27% 97%;
+    --foreground: 120 5% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 20%;
+    --card-foreground: 120 5% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 20%;
+    --popover-foreground: 120 5% 10%;
 
-    --primary: 42 50% 57%;
+    --primary: 42 46% 56%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 40 30% 95%;
-    --secondary-foreground: 220 15% 20%;
+    --secondary: 40 16% 95%;
+    --secondary-foreground: 120 5% 10%;
 
-    --muted: 40 20% 96%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 40 14% 94%;
+    --muted-foreground: 30 4% 42%;
 
-    --accent: 42 50% 57%;
+    --accent: 42 46% 56%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 75% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 20% 90%;
-    --input: 40 20% 90%;
-    --ring: 42 50% 57%;
+    --border: 38 24% 82%;
+    --input: 38 24% 82%;
+    --ring: 42 46% 56%;
 
-    --radius: 0.625rem;
-
-    --sidebar-background: 220 15% 12%;
-    --sidebar-foreground: 40 20% 90%;
-    --sidebar-primary: 42 50% 57%;
+    --sidebar-background: 40 16% 95%;
+    --sidebar-foreground: 120 5% 10%;
+    --sidebar-primary: 42 46% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 18%;
-    --sidebar-accent-foreground: 40 20% 90%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 42 50% 57%;
+    --sidebar-accent: 40 12% 92%;
+    --sidebar-accent-foreground: 120 5% 10%;
+    --sidebar-border: 38 18% 86%;
+    --sidebar-ring: 42 46% 56%;
 
-    --success: 145 60% 42%;
+    --success: 154 48% 33%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 78% 48%;
     --warning-foreground: 0 0% 100%;
-  }
-}
 
-@layer base {
+    /* tokens extras do sistema */
+    --surface: 40 16% 95%;
+    --surface-low: 40 14% 94%;
+    --surface-high: 0 0% 100%;
+    --surface-floating: 0 0% 100%;
+    --text-strong: 120 5% 10%;
+    --text-soft: 30 4% 42%;
+    --text-faint: 30 3% 58%;
+    --ghost-border: 38 24% 82%;
+    --metric-accent: 42 46% 56%;
+    --ambient-shadow: 0 12px 40px rgba(26, 28, 26, 0.04);
+  }
+
+  :root[data-theme="dark"] {
+    /* ===============================
+       DARK MODE — Financial Architect
+    =============================== */
+    --background: 0 0% 7%;
+    --foreground: 40 18% 94%;
+
+    --card: 0 0% 11%;
+    --card-foreground: 40 18% 94%;
+
+    --popover: 0 0% 16%;
+    --popover-foreground: 40 18% 94%;
+
+    --primary: 42 68% 67%;
+    --primary-foreground: 38 100% 7%;
+
+    --secondary: 0 0% 11%;
+    --secondary-foreground: 40 18% 94%;
+
+    --muted: 0 0% 14%;
+    --muted-foreground: 40 8% 68%;
+
+    --accent: 42 46% 56%;
+    --accent-foreground: 38 100% 7%;
+
+    --destructive: 8 100% 83%;
+    --destructive-foreground: 0 0% 15%;
+
+    --border: 35 15% 27%;
+    --input: 35 15% 27%;
+    --ring: 42 68% 67%;
+
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 40 18% 92%;
+    --sidebar-primary: 42 46% 56%;
+    --sidebar-primary-foreground: 38 100% 7%;
+    --sidebar-accent: 0 0% 11%;
+    --sidebar-accent-foreground: 40 18% 94%;
+    --sidebar-border: 35 15% 24%;
+    --sidebar-ring: 42 68% 67%;
+
+    --success: 222 72% 85%;
+    --success-foreground: 228 30% 18%;
+    --warning: 38 72% 58%;
+    --warning-foreground: 38 100% 7%;
+
+    /* tokens extras do sistema */
+    --surface: 0 0% 11%;
+    --surface-low: 0 0% 9%;
+    --surface-high: 0 0% 16%;
+    --surface-floating: 0 0% 18%;
+    --text-strong: 40 18% 94%;
+    --text-soft: 40 8% 68%;
+    --text-faint: 35 6% 52%;
+    --ghost-border: 35 15% 27%;
+    --metric-accent: 42 46% 56%;
+    --ambient-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  }
+
   * {
     @apply border-border;
   }
 
+  html {
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: 'Montserrat', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1,
   h2,
   h3,
-  h4 {
-    font-family: 'Montserrat', sans-serif;
+  h4,
+  h5,
+  h6 {
+    font-family: 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-background text-foreground;
+  }
+
+  .app-surface {
+    background-color: hsl(var(--surface));
+  }
+
+  .app-surface-low {
+    background-color: hsl(var(--surface-low));
+  }
+
+  .app-surface-high {
+    background-color: hsl(var(--surface-high));
+  }
+
+  .app-floating {
+    background-color: hsl(var(--surface-floating) / 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .app-card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border-radius: 1rem;
+    box-shadow: var(--ambient-shadow);
+  }
+
+  .app-card-soft {
+    background-color: hsl(var(--surface));
+    color: hsl(var(--foreground));
+    border-radius: 1rem;
+  }
+
+  .app-card-metric {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border-radius: 1rem;
+    box-shadow: var(--ambient-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .app-card-metric::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: hsl(var(--metric-accent));
+    border-radius: 999px;
+  }
+
+  .app-sidebar {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+  }
+
+  .app-sidebar-item {
+    @apply rounded-full transition-all duration-200;
+    color: hsl(var(--text-soft));
+  }
+
+  .app-sidebar-item:hover {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+
+  .app-sidebar-item-active {
+    background-color: hsl(var(--sidebar-primary));
+    color: hsl(var(--sidebar-primary-foreground));
+    box-shadow: 0 0 0 1px hsl(var(--sidebar-primary) / 0.1);
+  }
+
+  .app-primary-btn {
+    background: linear-gradient(135deg, #c4a45a 0%, #745b18 100%);
+    color: white;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+  }
+
+  .app-primary-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.98);
+  }
+
+  .app-secondary-btn {
+    background-color: hsl(var(--surface-high));
+    color: hsl(var(--foreground));
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+  }
+
+  .app-secondary-btn:hover {
+    background-color: hsl(var(--surface));
+  }
+
+  .app-ghost-btn {
+    background-color: transparent;
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--ghost-border) / 0.2);
+    border-radius: 999px;
+    transition: all 0.2s ease;
+  }
+
+  .app-ghost-btn:hover {
+    background-color: hsl(var(--surface-high));
+  }
+
+  .app-input {
+    background-color: hsl(var(--surface-high));
+    color: hsl(var(--foreground));
+    border: none;
+    border-bottom: 1px solid hsl(var(--ghost-border) / 0.28);
+    border-radius: 0.75rem 0.75rem 0 0;
+    transition: all 0.2s ease;
+  }
+
+  .app-input::placeholder {
+    color: hsl(var(--text-faint));
+  }
+
+  .app-input:focus {
+    outline: none;
+    border-bottom-color: hsl(var(--primary));
+    box-shadow: inset 0 -1px 0 hsl(var(--primary));
+  }
+
+  .app-section {
+    background-color: hsl(var(--surface));
+    border-radius: 1.25rem;
+  }
+
+  .app-muted {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .app-soft {
+    color: hsl(var(--text-soft));
+  }
+
+  .app-faint {
+    color: hsl(var(--text-faint));
+  }
+
+  .app-divider-space > * + * {
+    margin-top: 0.75rem;
+  }
+
+  .app-table-row {
+    border-radius: 0.875rem;
+    transition: background-color 0.2s ease;
+  }
+
+  .app-table-row:hover {
+    background-color: hsl(var(--surface));
+  }
+
+  .app-badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+    background-color: hsl(var(--surface-high));
+    color: hsl(var(--foreground));
+  }
+
+  .app-success {
+    color: hsl(var(--success));
+  }
+
+  .app-danger {
+    color: hsl(var(--destructive));
+  }
+
+  .app-glass {
+    background-color: hsl(var(--surface-floating) / 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--ambient-shadow);
   }
 }
 
 /* =========================================================
-   LOGIN BG (OFF-WHITE + PATTERN SVG + "LANTERNA")
-   Ativa somente quando body tem class "login-bg"
+   LOGIN BG (mantido e refinado)
 ========================================================= */
 
 body.login-bg {
@@ -80,25 +354,22 @@ body.login-bg {
   overflow: hidden;
 
   --login-bg: #f6f4ef;
-
-  /* tamanho do pattern (sem esticar, pq é SVG quadrado) */
   --pattern-size: 160px;
-
-  /* opacidades */
-  --base-opacity: 0.08; /* bem clarinho */
-  --spot-opacity: 0.28; /* mais forte no mouse */
-
-  /* posição do mouse (JS atualiza) */
+  --base-opacity: 0.08;
+  --spot-opacity: 0.28;
   --mx: 50%;
   --my: 50%;
-
-  /* raio do spotlight */
   --spot-radius: 180px;
 
   background: var(--login-bg);
 }
 
-/* Pattern SVG (desenhado em código, sem distorcer) */
+html[data-theme="dark"] body.login-bg {
+  --login-bg: #0e0e0e;
+  --base-opacity: 0.05;
+  --spot-opacity: 0.18;
+}
+
 body.login-bg::before {
   content: "";
   position: fixed;
@@ -110,11 +381,9 @@ body.login-bg::before {
   background-repeat: repeat;
   background-size: var(--pattern-size) var(--pattern-size);
   background-position: center;
-
   opacity: var(--base-opacity);
 }
 
-/* Spotlight: mesmo pattern, revelado só onde o mouse passa */
 body.login-bg::after {
   content: "";
   position: fixed;
@@ -126,7 +395,6 @@ body.login-bg::after {
   background-repeat: repeat;
   background-size: var(--pattern-size) var(--pattern-size);
   background-position: center;
-
   opacity: var(--spot-opacity);
 
   -webkit-mask-image: radial-gradient(
@@ -148,4 +416,19 @@ body.login-bg::after {
     --pattern-size: 140px;
     --spot-radius: 150px;
   }
+}
+
+/* scrollbar refinada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--ghost-border) / 0.45);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }

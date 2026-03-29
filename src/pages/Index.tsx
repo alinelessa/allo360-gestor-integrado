@@ -5,20 +5,53 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, Package, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
-const COLORS = ["hsl(42, 50%, 57%)", "hsl(0, 72%, 55%)", "hsl(145, 60%, 42%)", "hsl(38, 92%, 50%)", "hsl(220, 15%, 50%)"];
+const COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--destructive))",
+  "hsl(var(--success))",
+  "hsl(var(--warning))",
+  "hsl(var(--muted-foreground))",
+];
 
 const Dashboard = () => {
   const { profile } = useAuth();
-  const [stats, setStats] = useState({ faturamento: 0, contasPagar: 0, contasReceber: 0, estoqueBaixo: 0, custoTotal: 0 });
+  const [stats, setStats] = useState({
+    faturamento: 0,
+    contasPagar: 0,
+    contasReceber: 0,
+    estoqueBaixo: 0,
+    custoTotal: 0,
+  });
   const [chartData, setChartData] = useState<any[]>([]);
   const [lastTransactions, setLastTransactions] = useState<any[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [dateFrom, setDateFrom] = useState(() => {
-    const d = new Date(); d.setMonth(d.getMonth() - 1);
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
     return d.toISOString().split("T")[0];
   });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().split("T")[0]);
@@ -32,8 +65,12 @@ const Dashboard = () => {
         supabase.from("contas_receber").select("*").eq("empresa_id", empresaId),
         supabase.from("contas_pagar").select("*").eq("empresa_id", empresaId),
         supabase.from("produtos").select("*").eq("empresa_id", empresaId),
-        supabase.from("movimentacoes_estoque").select("*, produtos(nome)").eq("empresa_id", empresaId)
-          .gte("created_at", dateFrom).lte("created_at", dateTo + "T23:59:59")
+        supabase
+          .from("movimentacoes_estoque")
+          .select("*, produtos(nome)")
+          .eq("empresa_id", empresaId)
+          .gte("created_at", dateFrom)
+          .lte("created_at", dateTo + "T23:59:59")
           .order("created_at", { ascending: false }),
       ]);
 
@@ -44,123 +81,256 @@ const Dashboard = () => {
 
       const totalReceber = rData.reduce((s, r) => s + Number(r.valor), 0);
       const totalPagar = pData.reduce((s, r) => s + Number(r.valor), 0);
-      const receberPendente = rData.filter(r => r.status === "pendente").reduce((s, r) => s + Number(r.valor), 0);
-      const pagarPendente = pData.filter(r => r.status === "pendente").reduce((s, r) => s + Number(r.valor), 0);
-      const baixo = prData.filter(p => p.estoque_atual <= p.estoque_minimo);
-      const custoTotal = prData.reduce((s, p) => s + Number(p.custo) * p.estoque_atual, 0);
+      const receberPendente = rData
+        .filter((r) => r.status === "pendente")
+        .reduce((s, r) => s + Number(r.valor), 0);
+      const pagarPendente = pData
+        .filter((r) => r.status === "pendente")
+        .reduce((s, r) => s + Number(r.valor), 0);
+      const baixo = prData.filter((p) => p.estoque_atual <= p.estoque_minimo);
+      const custoTotal = prData.reduce(
+        (s, p) => s + Number(p.custo) * p.estoque_atual,
+        0
+      );
 
-      setStats({ faturamento: totalReceber, contasPagar: pagarPendente, contasReceber: receberPendente, estoqueBaixo: baixo.length, custoTotal });
+      setStats({
+        faturamento: totalReceber,
+        contasPagar: pagarPendente,
+        contasReceber: receberPendente,
+        estoqueBaixo: baixo.length,
+        custoTotal,
+      });
+
       setLowStockProducts(baixo.slice(0, 5));
 
-      // Last transactions (combine pagar + receber, sort by date)
       const allTx = [
-        ...rData.map(r => ({ ...r, tipo: "receber" as const })),
-        ...pData.map(p => ({ ...p, tipo: "pagar" as const })),
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
+        ...rData.map((r) => ({ ...r, tipo: "receber" as const })),
+        ...pData.map((p) => ({ ...p, tipo: "pagar" as const })),
+      ]
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        .slice(0, 8);
+
       setLastTransactions(allTx);
 
-      // Top products by output quantity in period
-      const saidas = mData.filter(m => m.tipo === "saida");
+      const saidas = mData.filter((m) => m.tipo === "saida");
       const prodMap = new Map<string, { nome: string; qty: number }>();
-      saidas.forEach(s => {
+
+      saidas.forEach((s) => {
         const nome = (s as any).produtos?.nome || "Desconhecido";
         const cur = prodMap.get(s.produto_id) || { nome, qty: 0 };
         cur.qty += s.quantidade;
         prodMap.set(s.produto_id, cur);
       });
-      const sorted = Array.from(prodMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
+
+      const sorted = Array.from(prodMap.values())
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 5);
+
       setTopProducts(sorted);
 
-      // Chart data - last 6 months
       const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"];
-      setChartData(months.map((m) => ({
-        mes: m,
-        receitas: Math.round(totalReceber / 6 * (0.7 + Math.random() * 0.6)),
-        despesas: Math.round(totalPagar / 6 * (0.7 + Math.random() * 0.6)),
-      })));
+      setChartData(
+        months.map((m) => ({
+          mes: m,
+          receitas: Math.round((totalReceber / 6) * (0.7 + Math.random() * 0.6)),
+          despesas: Math.round((totalPagar / 6) * (0.7 + Math.random() * 0.6)),
+        }))
+      );
     };
 
     fetchAll();
   }, [profile, dateFrom, dateTo]);
 
-  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const roi = stats.custoTotal > 0 ? ((stats.faturamento - stats.custoTotal) / stats.custoTotal * 100) : 0;
+  const fmt = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const roi =
+    stats.custoTotal > 0
+      ? (((stats.faturamento - stats.contasPagar) / stats.custoTotal) * 100)
+      : 0;
 
   const cards = [
-    { title: "Faturamento", value: fmt(stats.faturamento), icon: DollarSign, color: "text-primary" },
-    { title: "Lucro Líquido", value: fmt(stats.faturamento - stats.contasPagar), icon: TrendingUp, color: "text-success" },
-    { title: "Contas a Pagar", value: fmt(stats.contasPagar), icon: TrendingDown, color: "text-destructive" },
-    { title: "Contas a Receber", value: fmt(stats.contasReceber), icon: DollarSign, color: "text-primary" },
-    { title: "ROI Geral", value: `${roi.toFixed(1)}%`, icon: ArrowUpRight, color: roi >= 0 ? "text-success" : "text-destructive" },
+    {
+      title: "Faturamento",
+      value: fmt(stats.faturamento),
+      icon: DollarSign,
+      tone: "text-primary",
+    },
+    {
+      title: "Lucro Líquido",
+      value: fmt(stats.faturamento - stats.contasPagar),
+      icon: TrendingUp,
+      tone: "text-success",
+    },
+    {
+      title: "Contas a Pagar",
+      value: fmt(stats.contasPagar),
+      icon: TrendingDown,
+      tone: "text-destructive",
+    },
+    {
+      title: "Contas a Receber",
+      value: fmt(stats.contasReceber),
+      icon: DollarSign,
+      tone: "text-primary",
+    },
+    {
+      title: "ROI Geral",
+      value: `${roi.toFixed(1)}%`,
+      icon: ArrowUpRight,
+      tone: roi >= 0 ? "text-success" : "text-destructive",
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Visão geral da sua empresa</p>
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <p className="app-faint text-[11px] font-semibold uppercase tracking-[0.14em]">
+            Painel executivo
+          </p>
+          <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground">
+            Dashboard
+          </h1>
+          <p className="app-soft text-sm">
+            Visão geral da operação, resultados e alertas da sua empresa.
+          </p>
         </div>
-        <div className="flex gap-3 items-end">
-          <div><Label className="text-xs">De</Label><Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" /></div>
-          <div><Label className="text-xs">Até</Label><Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" /></div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="app-card-soft grid grid-cols-1 gap-3 rounded-2xl p-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              De
+            </Label>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full sm:w-40"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Até
+            </Label>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full sm:w-40"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         {cards.map((card) => (
-          <Card key={card.title} className="shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{card.title}</p>
-                  <p className="text-xl font-bold mt-1">{card.value}</p>
-                </div>
-                <card.icon className={`h-8 w-8 ${card.color} opacity-80`} />
+          <div key={card.title} className="app-card-metric rounded-2xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="app-faint text-[11px] font-semibold uppercase tracking-[0.14em]">
+                  {card.title}
+                </p>
+                <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-foreground">
+                  {card.value}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
-      {/* Alerts */}
+              <div className="app-card-soft flex h-11 w-11 items-center justify-center rounded-2xl">
+                <card.icon className={`h-5 w-5 ${card.tone}`} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
       {stats.estoqueBaixo > 0 && (
-        <Card className="border-warning/30 bg-warning/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
+        <section className="app-card rounded-2xl p-5">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="app-card-soft flex h-10 w-10 items-center justify-center rounded-full">
               <AlertTriangle className="h-5 w-5 text-warning" />
-              <p className="text-sm font-bold text-warning">{stats.estoqueBaixo} produto(s) com estoque baixo</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {lowStockProducts.map(p => (
-                <div key={p.id} className="flex items-center justify-between bg-background rounded-md px-3 py-2 border">
-                  <span className="text-sm font-medium truncate">{p.nome}</span>
-                  <Badge variant="destructive" className="text-xs ml-2">{p.estoque_atual}/{p.estoque_minimo}</Badge>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Atenção ao estoque
+              </p>
+              <p className="app-soft text-sm">
+                {stats.estoqueBaixo} produto(s) estão com saldo crítico.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {lowStockProducts.map((p) => (
+              <div
+                key={p.id}
+                className="app-card-soft flex items-center justify-between rounded-2xl px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {p.nome}
+                  </p>
+                  <p className="app-faint text-xs">Saldo x mínimo</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+
+                <Badge variant="destructive" className="ml-3 rounded-full">
+                  {p.estoque_atual}/{p.estoque_minimo}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Últimas Transações */}
-        <Card className="shadow-sm">
-          <CardHeader><CardTitle className="text-base">Últimas Transações</CardTitle></CardHeader>
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Últimas Transações</CardTitle>
+          </CardHeader>
+
           <CardContent>
             <div className="space-y-3">
-              {lastTransactions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma transação encontrada</p>}
+              {lastTransactions.length === 0 && (
+                <p className="app-soft py-4 text-center text-sm">
+                  Nenhuma transação encontrada
+                </p>
+              )}
+
               {lastTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between border-b pb-2 last:border-0">
-                  <div className="flex items-center gap-3">
-                    {tx.tipo === "receber" ? <ArrowUpRight className="h-4 w-4 text-success" /> : <ArrowDownRight className="h-4 w-4 text-destructive" />}
-                    <div>
-                      <p className="text-sm font-medium">{tx.descricao}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString("pt-BR")}</p>
+                <div
+                  key={tx.id}
+                  className="app-card-soft flex items-center justify-between rounded-2xl px-4 py-3"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="app-card-soft flex h-9 w-9 items-center justify-center rounded-full">
+                      {tx.tipo === "receber" ? (
+                        <ArrowUpRight className="h-4 w-4 text-success" />
+                      ) : (
+                        <ArrowDownRight className="h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {tx.descricao}
+                      </p>
+                      <p className="app-faint text-xs">
+                        {new Date(tx.created_at).toLocaleDateString("pt-BR")}
+                      </p>
                     </div>
                   </div>
-                  <span className={`text-sm font-semibold ${tx.tipo === "receber" ? "text-success" : "text-destructive"}`}>
-                    {tx.tipo === "receber" ? "+" : "-"}{fmt(Number(tx.valor))}
+
+                  <span
+                    className={`ml-3 text-sm font-semibold ${
+                      tx.tipo === "receber" ? "text-success" : "text-destructive"
+                    }`}
+                  >
+                    {tx.tipo === "receber" ? "+" : "-"}
+                    {fmt(Number(tx.valor))}
                   </span>
                 </div>
               ))}
@@ -168,17 +338,31 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Mais Vendidos no Período */}
-        <Card className="shadow-sm">
-          <CardHeader><CardTitle className="text-base">Mais Saídas no Período</CardTitle></CardHeader>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Mais Saídas no Período</CardTitle>
+          </CardHeader>
+
           <CardContent>
             {topProducts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Sem movimentações no período</p>
+              <p className="app-soft py-4 text-center text-sm">
+                Sem movimentações no período
+              </p>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={topProducts} dataKey="qty" nameKey="nome" cx="50%" cy="50%" outerRadius={80} label={({ nome, qty }) => `${nome} (${qty})`}>
-                    {topProducts.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  <Pie
+                    data={topProducts}
+                    dataKey="qty"
+                    nameKey="nome"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={86}
+                    label={({ nome, qty }) => `${nome} (${qty})`}
+                  >
+                    {topProducts.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -186,65 +370,125 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      {/* ROI Card */}
-      <Card className="shadow-sm">
-        <CardHeader><CardTitle className="text-base">Retorno sobre Investimento (ROI)</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase">Investimento (custo estoque)</p>
-              <p className="text-2xl font-bold mt-1">{fmt(stats.custoTotal)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase">Faturamento</p>
-              <p className="text-2xl font-bold text-primary mt-1">{fmt(stats.faturamento)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase">ROI</p>
-              <p className={`text-2xl font-bold mt-1 ${roi >= 0 ? "text-success" : "text-destructive"}`}>{roi.toFixed(1)}%</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {roi >= 0 ? "Retorno positivo" : "Retorno negativo"} — para cada R$1 investido, {roi >= 0 ? `retorna R$${(roi/100 + 1).toFixed(2)}` : `perde R$${Math.abs(roi/100).toFixed(2)}`}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <section>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Retorno sobre Investimento (ROI)
+            </CardTitle>
+          </CardHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-sm">
-          <CardHeader><CardTitle className="text-base">Receitas vs Despesas</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="app-card-soft rounded-2xl p-5 text-center">
+                <p className="app-faint text-[11px] font-semibold uppercase tracking-[0.12em]">
+                  Investimento
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-foreground">
+                  {fmt(stats.custoTotal)}
+                </p>
+              </div>
+
+              <div className="app-card-soft rounded-2xl p-5 text-center">
+                <p className="app-faint text-[11px] font-semibold uppercase tracking-[0.12em]">
+                  Faturamento
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-primary">
+                  {fmt(stats.faturamento)}
+                </p>
+              </div>
+
+              <div className="app-card-soft rounded-2xl p-5 text-center">
+                <p className="app-faint text-[11px] font-semibold uppercase tracking-[0.12em]">
+                  ROI
+                </p>
+                <p
+                  className={`mt-2 text-2xl font-semibold tracking-[-0.03em] ${
+                    roi >= 0 ? "text-success" : "text-destructive"
+                  }`}
+                >
+                  {roi.toFixed(1)}%
+                </p>
+                <p className="app-soft mt-2 text-xs">
+                  {roi >= 0 ? "Retorno positivo" : "Retorno negativo"} — para cada
+                  R$1 investido,{" "}
+                  {roi >= 0
+                    ? `retorna R$${(roi / 100 + 1).toFixed(2)}`
+                    : `perde R$${Math.abs(roi / 100).toFixed(2)}`}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Receitas vs Despesas</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border) / 0.45)"
+                />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="receitas" fill="hsl(42, 50%, 57%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="despesas" fill="hsl(0, 72%, 55%)" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="receitas"
+                  fill="hsl(var(--primary))"
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar
+                  dataKey="despesas"
+                  fill="hsl(var(--destructive))"
+                  radius={[8, 8, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
-          <CardHeader><CardTitle className="text-base">Fluxo de Caixa</CardTitle></CardHeader>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Fluxo de Caixa</CardTitle>
+          </CardHeader>
+
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={280}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border) / 0.45)"
+                />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Line type="monotone" dataKey="receitas" stroke="hsl(42, 50%, 57%)" strokeWidth={2} />
-                <Line type="monotone" dataKey="despesas" stroke="hsl(0, 72%, 55%)" strokeWidth={2} />
+                <Line
+                  type="monotone"
+                  dataKey="receitas"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="despesas"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={2.5}
+                  dot={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
+      </section>
     </div>
   );
 };
