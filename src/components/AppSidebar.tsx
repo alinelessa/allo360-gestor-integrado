@@ -17,6 +17,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -36,13 +37,86 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Pedidos Venda", url: "/pedidos-venda", icon: ShoppingCart },
-  { title: "Pedidos Compra", url: "/pedidos-compra", icon: PackagePlus, roles: ["admin", "estoque"] },
-  { title: "Estoque", url: "/estoque", icon: Package, roles: ["admin", "estoque"] },
+  {
+    title: "Pedidos Compra",
+    url: "/pedidos-compra",
+    icon: PackagePlus,
+    roles: ["admin", "estoque"],
+  },
+  {
+    title: "Estoque",
+    url: "/estoque",
+    icon: Package,
+    roles: ["admin", "estoque"],
+  },
   { title: "Clientes", url: "/clientes", icon: Users },
-  { title: "Fornecedores", url: "/fornecedores", icon: Truck, roles: ["admin", "estoque"] },
-  { title: "Financeiro", url: "/financeiro", icon: DollarSign, roles: ["admin", "financeiro"] },
-  { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["admin", "financeiro"] },
+  {
+    title: "Fornecedores",
+    url: "/fornecedores",
+    icon: Truck,
+    roles: ["admin", "estoque"],
+  },
+  {
+    title: "Financeiro",
+    url: "/financeiro",
+    icon: DollarSign,
+    roles: ["admin", "financeiro"],
+  },
+  {
+    title: "Relatórios",
+    url: "/relatorios",
+    icon: BarChart3,
+    roles: ["admin", "financeiro"],
+  },
 ];
+
+function CollapsedLogoMark() {
+  return (
+    <div className="relative flex h-16 w-16 items-center justify-center">
+      <span
+        className="absolute inset-0 rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(212,175,55,0.18) 0%, rgba(212,175,55,0.08) 38%, rgba(212,175,55,0.02) 60%, rgba(212,175,55,0) 74%)",
+          filter: "blur(8px)",
+        }}
+      />
+      <svg
+        width={38}
+        height={38}
+        viewBox="0 0 60 60"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="relative"
+      >
+        <circle
+          cx="22"
+          cy="25"
+          r="12"
+          stroke="hsl(42 50% 57%)"
+          strokeWidth="3"
+          fill="none"
+        />
+        <circle
+          cx="38"
+          cy="25"
+          r="12"
+          stroke="hsl(42 50% 57%)"
+          strokeWidth="3"
+          fill="none"
+        />
+        <circle
+          cx="30"
+          cy="38"
+          r="12"
+          stroke="hsl(42 50% 57%)"
+          strokeWidth="3"
+          fill="none"
+        />
+      </svg>
+    </div>
+  );
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -56,78 +130,105 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="app-sidebar border-r-0"
-    >
-      <div className="flex h-full flex-col">
-        <div className="px-4 pb-4 pt-5">
-          <div className="app-card-soft flex min-h-[84px] items-center justify-center rounded-2xl px-3">
-            {collapsed ? (
-              <svg width={28} height={28} viewBox="0 0 60 60" fill="none">
-                <circle cx="22" cy="25" r="12" stroke="hsl(var(--primary))" strokeWidth="3" fill="none" />
-                <circle cx="38" cy="25" r="12" stroke="hsl(var(--primary))" strokeWidth="3" fill="none" />
-                <circle cx="30" cy="38" r="12" stroke="hsl(var(--primary))" strokeWidth="3" fill="none" />
-              </svg>
-            ) : (
-              <Logo size="md" />
-            )}
-          </div>
-        </div>
-
-        <SidebarContent className="px-3">
-          <SidebarGroup>
-            <div className="mb-3 px-2">
-              {!collapsed && (
-                <p className="app-faint text-[11px] font-semibold uppercase tracking-[0.12em]">
-                  Navegação
-                </p>
-              )}
-            </div>
-
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-2">
-                {visibleItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={item.title}>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/"}
-                        className="app-sidebar-item flex items-center gap-3 px-4 py-3 text-sm font-medium"
-                        activeClassName="app-sidebar-item-active flex items-center gap-3 px-4 py-3 text-sm font-semibold"
-                      >
-                        <item.icon className="h-5 w-5 shrink-0" />
-                        <span className="truncate">{item.title}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-
-        <SidebarFooter className="mt-auto px-4 pb-5 pt-4">
-          <div className="app-card-soft rounded-2xl p-3">
-            {!collapsed && profile && (
-              <div className="mb-3">
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {profile.nome}
-                </p>
-                <p className="app-soft truncate text-xs">{profile.email}</p>
-              </div>
-            )}
-
-            <button
-              onClick={signOut}
-              className="app-ghost-btn flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium"
-            >
-              <LogOut className="h-4 w-4" />
-              {!collapsed && <span>Sair</span>}
-            </button>
-          </div>
-        </SidebarFooter>
+    <Sidebar collapsible="icon" className="border-r-0">
+      <div
+        className={`border-b border-sidebar-border/15 ${
+          collapsed
+            ? "flex justify-center px-2 py-5"
+            : "flex items-center justify-center px-4 py-5"
+        }`}
+      >
+        {collapsed ? <CollapsedLogoMark /> : <Logo size="md" />}
       </div>
+
+      <SidebarContent
+        className={
+          collapsed
+            ? "mt-0 flex items-center justify-start"
+            : "mt-2"
+        }
+      >
+        <SidebarGroup
+          className={
+            collapsed
+              ? "flex w-full flex-1 items-center justify-start px-0 pt-5"
+              : ""
+          }
+        >
+          <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-[11px] tracking-[0.14em]">
+            {!collapsed && "Menu"}
+          </SidebarGroupLabel>
+
+          <SidebarGroupContent
+            className={collapsed ? "flex w-full justify-center" : ""}
+          >
+            <SidebarMenu
+              className={
+                collapsed
+                  ? "flex w-full flex-col items-center gap-4"
+                  : "gap-1.5"
+              }
+            >
+              {visibleItems.map((item) => (
+                <SidebarMenuItem
+                  key={item.title}
+                  className={collapsed ? "flex justify-center" : ""}
+                >
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    className={collapsed ? "!h-12 !w-12 !rounded-2xl !p-0" : ""}
+                  >
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/"}
+                      className={`flex items-center ${
+                        collapsed
+                          ? "justify-center rounded-2xl"
+                          : "gap-3 px-3 py-2.5 rounded-2xl"
+                      } text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors`}
+                      activeClassName="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && (
+                        <span className="font-medium">{item.title}</span>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter
+        className={`border-t border-sidebar-border/15 ${
+          collapsed ? "flex items-center justify-center p-3" : "p-4"
+        }`}
+      >
+        {!collapsed && profile && (
+          <div className="mb-3 text-xs text-sidebar-foreground/50">
+            <p className="font-medium text-sidebar-foreground/80 truncate">
+              {profile.nome}
+            </p>
+            <p className="truncate">{profile.email}</p>
+          </div>
+        )}
+
+        <button
+          onClick={signOut}
+          className={`flex items-center text-sidebar-foreground/50 hover:text-destructive transition-colors ${
+            collapsed
+              ? "h-12 w-12 justify-center rounded-2xl hover:bg-sidebar-accent"
+              : "w-full gap-2 text-sm"
+          }`}
+          title="Sair"
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span>Sair</span>}
+        </button>
+      </SidebarFooter>
     </Sidebar>
   );
 }

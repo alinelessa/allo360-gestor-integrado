@@ -33,6 +33,10 @@ function formatCurrency(value: number) {
   });
 }
 
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
 function getDateRangeForToday() {
   const now = new Date();
 
@@ -63,22 +67,18 @@ function getFallbackContext(): AssistantContext {
 async function getLowStockSummary(
   context: AssistantContext
 ): Promise<AssistantResponse> {
-  if (!context.empresaId || !context.lojaId) {
+  if (!context.empresaId) {
     return {
-      reply:
-        "Não consegui identificar a empresa ou a loja ativa. Selecione uma loja para eu analisar o estoque.",
-      suggestions: [
-        "Me dê um resumo de hoje",
-        "Quanto tenho a receber em aberto?",
-      ],
+      reply: "Não consegui identificar sua empresa.",
+      suggestions: ["Me dê um resumo de hoje"],
     };
   }
 
   const { data, error } = await supabase
     .from("produtos")
-    .select("id, nome, estoque_atual, estoque_minimo")
+    .select("id, nome, estoque_atual, estoque_minimo, deleted_at")
     .eq("empresa_id", context.empresaId)
-    .eq("loja_id", context.lojaId);
+    .is("deleted_at", null);
 
   if (error) {
     return {
@@ -89,18 +89,14 @@ async function getLowStockSummary(
 
   const lowStock =
     data?.filter(
-      (item) => Number(item.estoque_atual ?? 0) <= Number(item.estoque_minimo ?? 0)
+      (item) =>
+        Number(item.estoque_atual ?? 0) <= Number(item.estoque_minimo ?? 0)
     ) ?? [];
 
   if (lowStock.length === 0) {
     return {
-      reply: `Na loja ${
-        context.lojaNome ?? "ativa"
-      }, não encontrei produtos com estoque abaixo do mínimo no momento.`,
-      suggestions: [
-        "Me dê um resumo de hoje",
-        "Quanto tenho a receber em aberto?",
-      ],
+      reply: "Não encontrei produtos com estoque abaixo do mínimo.",
+      suggestions: ["Quem está devendo?", "Me dê um resumo de hoje"],
     };
   }
 
@@ -115,13 +111,11 @@ async function getLowStockSummary(
     .join(", ");
 
   return {
-    reply: `Encontrei ${lowStock.length} produto(s) com estoque baixo na loja ${
-      context.lojaNome ?? "ativa"
-    }. Os mais críticos são: ${top}.`,
+    reply: `Encontrei ${lowStock.length} produto(s) com estoque baixo. Os mais críticos são: ${top}.`,
     suggestions: [
+      "Quem está devendo?",
+      "Quais contas estão vencidas?",
       "Me dê um resumo de hoje",
-      "Quanto tenho a receber em aberto?",
-      "Quais produtos tiveram mais saídas?",
     ],
   };
 }
@@ -131,22 +125,20 @@ async function getOpenReceivablesSummary(
 ): Promise<AssistantResponse> {
   if (!context.empresaId) {
     return {
-      reply: "Não consegui identificar a empresa ativa para consultar o financeiro.",
+      reply:
+        "Não consegui identificar a empresa ativa para consultar o financeiro.",
       suggestions: ["Me dê um resumo de hoje"],
     };
   }
 
-  let query = supabase
+  const { data, error } = await supabase
     .from("contas_receber")
-    .select("id, descricao, valor, status, vencimento, loja_id")
+    .select(
+      "id, descricao, valor, status, data_vencimento, cliente_id, deleted_at"
+    )
     .eq("empresa_id", context.empresaId)
-    .eq("status", "pendente");
-
-  if (context.lojaId) {
-    query = query.eq("loja_id", context.lojaId);
-  }
-
-  const { data, error } = await query;
+    .is("deleted_at", null)
+    .neq("status", "pago");
 
   if (error) {
     return {
@@ -162,23 +154,25 @@ async function getOpenReceivablesSummary(
 
   if (!data || data.length === 0) {
     return {
-      reply: `No momento não há contas a receber pendentes${
-        context.lojaNome ? ` na loja ${context.lojaNome}` : ""
-      }.`,
-      suggestions: ["Me dê um resumo de hoje", "Como está meu estoque baixo?"],
+      reply: "No momento não há contas a receber em aberto.",
+      suggestions: ["Quem está devendo?", "Me dê um resumo de hoje"],
     };
   }
 
   const proximas = [...data]
     .sort((a, b) => {
-      const aTime = a.vencimento ? new Date(a.vencimento).getTime() : Infinity;
-      const bTime = b.vencimento ? new Date(b.vencimento).getTime() : Infinity;
+      const aTime = a.data_vencimento
+        ? new Date(a.data_vencimento).getTime()
+        : Infinity;
+      const bTime = b.data_vencimento
+        ? new Date(b.data_vencimento).getTime()
+        : Infinity;
       return aTime - bTime;
     })
     .slice(0, 3)
     .map((item) => {
-      const venc = item.vencimento
-        ? new Date(item.vencimento).toLocaleDateString("pt-BR")
+      const venc = item.data_vencimento
+        ? new Date(item.data_vencimento).toLocaleDateString("pt-BR")
         : "sem vencimento";
 
       return `${item.descricao ?? "Sem descrição"} (${formatCurrency(
@@ -188,13 +182,148 @@ async function getOpenReceivablesSummary(
     .join(", ");
 
   return {
-    reply: `Você tem ${data.length} conta(s) a receber em aberto${
-      context.lojaNome ? ` na loja ${context.lojaNome}` : ""
-    }, somando ${formatCurrency(total)}. As próximas são: ${proximas}.`,
+    reply: `Você tem ${data.length} conta(s) a receber em aberto, somando ${formatCurrency(
+      total
+    )}. As próximas são: ${proximas}.`,
     suggestions: [
+      "Quem está devendo?",
+      "Quais contas estão vencidas?",
       "Me dê um resumo de hoje",
-      "Como está meu estoque baixo?",
-      "Quais produtos tiveram mais saídas?",
+    ],
+  };
+}
+
+async function getDebtorsSummary(
+  context: AssistantContext
+): Promise<AssistantResponse> {
+  if (!context.empresaId) {
+    return {
+      reply: "Não consegui identificar sua empresa.",
+      suggestions: ["Me dê um resumo de hoje"],
+    };
+  }
+
+  const hoje = getTodayDate();
+
+  const { data, error } = await supabase
+    .from("contas_receber")
+    .select(`
+      id,
+      valor,
+      status,
+      data_vencimento,
+      cliente_id,
+      deleted_at,
+      clientes (
+        nome
+      )
+    `)
+    .eq("empresa_id", context.empresaId)
+    .is("deleted_at", null)
+    .lt("data_vencimento", hoje)
+    .neq("status", "pago");
+
+  if (error) {
+    return {
+      reply: `Tive um problema ao consultar clientes com atraso: ${error.message}`,
+      suggestions: ["Quais contas estão vencidas?"],
+    };
+  }
+
+  if (!data || data.length === 0) {
+    return {
+      reply: "Nenhum cliente com contas vencidas no momento 🎉",
+      suggestions: ["Quais contas estão vencidas?", "Me dê um resumo de hoje"],
+    };
+  }
+
+  const mapa: Record<string, number> = {};
+
+  data.forEach((item: any) => {
+    const nome = item.clientes?.nome ?? "Cliente";
+    mapa[nome] = (mapa[nome] || 0) + Number(item.valor ?? 0);
+  });
+
+  const lista = Object.entries(mapa)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([nome, valor]) => `• ${nome}: ${formatCurrency(valor)}`)
+    .join("\n");
+
+  return {
+    reply: `Clientes com valores em atraso:\n\n${lista}`,
+    suggestions: [
+      "Quais contas estão vencidas?",
+      "Quanto tenho a receber em aberto?",
+      "Me dê um resumo de hoje",
+    ],
+  };
+}
+
+async function getOverdueBillsSummary(
+  context: AssistantContext
+): Promise<AssistantResponse> {
+  if (!context.empresaId) {
+    return {
+      reply: "Não consegui identificar sua empresa.",
+      suggestions: ["Quem está devendo?"],
+    };
+  }
+
+  const hoje = getTodayDate();
+
+  const { data, error } = await supabase
+    .from("contas_receber")
+    .select(`
+      id,
+      descricao,
+      valor,
+      status,
+      data_vencimento,
+      deleted_at,
+      clientes (
+        nome
+      )
+    `)
+    .eq("empresa_id", context.empresaId)
+    .is("deleted_at", null)
+    .lt("data_vencimento", hoje)
+    .neq("status", "pago")
+    .order("data_vencimento", { ascending: true });
+
+  if (error) {
+    return {
+      reply: `Tive um problema ao consultar contas vencidas: ${error.message}`,
+      suggestions: ["Quem está devendo?"],
+    };
+  }
+
+  if (!data || data.length === 0) {
+    return {
+      reply: "Não encontrei contas vencidas no momento.",
+      suggestions: ["Quem está devendo?", "Me dê um resumo de hoje"],
+    };
+  }
+
+  const lista = data
+    .slice(0, 5)
+    .map((item: any) => {
+      const cliente = item.clientes?.nome ?? "Cliente";
+      const venc = item.data_vencimento
+        ? new Date(item.data_vencimento).toLocaleDateString("pt-BR")
+        : "sem data";
+      return `• ${cliente} — ${formatCurrency(
+        Number(item.valor ?? 0)
+      )} (venc. ${venc})`;
+    })
+    .join("\n");
+
+  return {
+    reply: `Encontrei ${data.length} conta(s) vencida(s):\n\n${lista}`,
+    suggestions: [
+      "Quem está devendo?",
+      "Quanto tenho a receber em aberto?",
+      "Me dê um resumo de hoje",
     ],
   };
 }
@@ -211,29 +340,26 @@ async function getTodaySummary(
 
   const { start, end } = getDateRangeForToday();
 
-  let vendasQuery = supabase
+  const vendasQuery = supabase
     .from("pedidos_venda")
-    .select("id, valor_total, created_at, loja_id")
+    .select("id, total, created_at, deleted_at")
     .eq("empresa_id", context.empresaId)
+    .is("deleted_at", null)
     .gte("created_at", start)
     .lte("created_at", end);
 
-  let receberQuery = supabase
+  const receberQuery = supabase
     .from("contas_receber")
-    .select("id, valor, status, loja_id")
+    .select("id, valor, status, deleted_at")
     .eq("empresa_id", context.empresaId)
-    .eq("status", "pendente");
+    .is("deleted_at", null)
+    .neq("status", "pago");
 
-  let estoqueQuery = supabase
+  const estoqueQuery = supabase
     .from("produtos")
-    .select("id, estoque_atual, estoque_minimo, loja_id")
-    .eq("empresa_id", context.empresaId);
-
-  if (context.lojaId) {
-    vendasQuery = vendasQuery.eq("loja_id", context.lojaId);
-    receberQuery = receberQuery.eq("loja_id", context.lojaId);
-    estoqueQuery = estoqueQuery.eq("loja_id", context.lojaId);
-  }
+    .select("id, estoque_atual, estoque_minimo, deleted_at")
+    .eq("empresa_id", context.empresaId)
+    .is("deleted_at", null);
 
   const [vendasRes, receberRes, estoqueRes] = await Promise.all([
     vendasQuery,
@@ -243,8 +369,10 @@ async function getTodaySummary(
 
   if (vendasRes.error || receberRes.error || estoqueRes.error) {
     return {
-      reply:
-        "Tive um problema para montar o resumo de hoje. Confira se as tabelas financeiras e de pedidos estão acessíveis.",
+      reply: `Erro no resumo:
+vendas: ${vendasRes.error?.message ?? "ok"}
+receber: ${receberRes.error?.message ?? "ok"}
+estoque: ${estoqueRes.error?.message ?? "ok"}`,
       suggestions: [
         "Como está meu estoque baixo?",
         "Quanto tenho a receber em aberto?",
@@ -257,7 +385,7 @@ async function getTodaySummary(
   const produtos = estoqueRes.data ?? [];
 
   const faturamentoHoje = vendas.reduce(
-    (sum, item) => sum + Number(item.valor_total ?? 0),
+    (sum, item) => sum + Number(item.total ?? 0),
     0
   );
 
@@ -267,21 +395,20 @@ async function getTodaySummary(
   );
 
   const estoqueBaixo = produtos.filter(
-    (item) => Number(item.estoque_atual ?? 0) <= Number(item.estoque_minimo ?? 0)
+    (item) =>
+      Number(item.estoque_atual ?? 0) <= Number(item.estoque_minimo ?? 0)
   ).length;
 
   return {
-    reply: `Resumo de hoje${
-      context.lojaNome ? ` na loja ${context.lojaNome}` : ""
-    }: ${vendas.length} pedido(s) de venda registrados, faturamento de ${formatCurrency(
+    reply: `Resumo de hoje: ${vendas.length} pedido(s) de venda, faturamento de ${formatCurrency(
       faturamentoHoje
-    )}, ${contas.length} conta(s) a receber pendentes somando ${formatCurrency(
+    )}, ${contas.length} conta(s) a receber em aberto somando ${formatCurrency(
       totalReceber
     )} e ${estoqueBaixo} produto(s) com estoque crítico.`,
     suggestions: [
+      "Quem está devendo?",
+      "Quais contas estão vencidas?",
       "Como está meu estoque baixo?",
-      "Quanto tenho a receber em aberto?",
-      "Quais produtos tiveram mais saídas?",
     ],
   };
 }
@@ -291,8 +418,7 @@ async function getTopProductsSummary(
 ): Promise<AssistantResponse> {
   if (!context.empresaId) {
     return {
-      reply:
-        "Não consegui identificar a empresa ativa para consultar as movimentações.",
+      reply: "Não consegui identificar sua empresa.",
       suggestions: ["Me dê um resumo de hoje"],
     };
   }
@@ -301,7 +427,16 @@ async function getTopProductsSummary(
 
   let query = supabase
     .from("movimentacoes_estoque")
-    .select("produto_id, quantidade, tipo, produtos(nome), loja_id, created_at")
+    .select(`
+      produto_id,
+      quantidade,
+      tipo,
+      created_at,
+      loja_id,
+      produtos (
+        nome
+      )
+    `)
     .eq("empresa_id", context.empresaId)
     .eq("tipo", "saida")
     .gte("created_at", start)
@@ -322,10 +457,8 @@ async function getTopProductsSummary(
 
   if (!data || data.length === 0) {
     return {
-      reply: `Não encontrei saídas de estoque hoje${
-        context.lojaNome ? ` na loja ${context.lojaNome}` : ""
-      }.`,
-      suggestions: ["Me dê um resumo de hoje", "Como está meu estoque baixo?"],
+      reply: "Não encontrei saídas de estoque hoje.",
+      suggestions: ["Como está meu estoque baixo?", "Me dê um resumo de hoje"],
     };
   }
 
@@ -344,13 +477,13 @@ async function getTopProductsSummary(
     .slice(0, 5);
 
   return {
-    reply: `Os produtos com mais saídas hoje${
-      context.lojaNome ? ` na loja ${context.lojaNome}` : ""
-    } são: ${top.map((item) => `${item.nome} (${item.qty})`).join(", ")}.`,
+    reply: `Produtos com mais saídas hoje:\n\n${top
+      .map((item) => `• ${item.nome}: ${item.qty}`)
+      .join("\n")}`,
     suggestions: [
       "Como está meu estoque baixo?",
+      "Quem está devendo?",
       "Me dê um resumo de hoje",
-      "Quanto tenho a receber em aberto?",
     ],
   };
 }
@@ -361,6 +494,25 @@ export async function askAssistant(
 ): Promise<AssistantResponse> {
   const q = normalizeQuestion(question);
   const safeContext = context ?? getFallbackContext();
+
+  if (
+    q.includes("devendo") ||
+    q.includes("inadimplente") ||
+    q.includes("quem deve") ||
+    q.includes("quem está devendo") ||
+    q.includes("clientes devendo")
+  ) {
+    return getDebtorsSummary(safeContext);
+  }
+
+  if (
+    q.includes("contas vencidas") ||
+    q.includes("vencidas") ||
+    q.includes("vencidos") ||
+    q.includes("atrasadas")
+  ) {
+    return getOverdueBillsSummary(safeContext);
+  }
 
   if (q.includes("estoque")) {
     return getLowStockSummary(safeContext);
@@ -390,10 +542,10 @@ export async function askAssistant(
 
   return {
     reply:
-      "Já consigo consultar estoque baixo, contas a receber, resumo do dia e produtos com mais saídas. Me faça uma pergunta dentro desses temas.",
+      "Já consigo responder sobre estoque baixo, clientes devendo, contas vencidas, contas a receber, resumo do dia e produtos com mais saídas.",
     suggestions: [
-      "Como está meu estoque baixo?",
-      "Quanto tenho a receber em aberto?",
+      "Quem está devendo?",
+      "Quais contas estão vencidas?",
       "Me dê um resumo de hoje",
     ],
   };
